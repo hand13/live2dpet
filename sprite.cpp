@@ -38,11 +38,12 @@ bool SimpleSprite::init(const wchar_t * texture_path,const Matrix& model_matrix)
 	Game::getInstance()->getDevice()->CreateBuffer(&constant_buffer_desc,NULL,constant_buffer.GetAddressOf());
 
 
-	D3D11_SAMPLER_DESC sampler_desc;
-	ZeroMemory(&sampler_desc,sizeof(D3D11_SAMPLER_DESC));
-	sampler_desc.Filter = D3D11_FILTER_ANISOTROPIC;
-	//todo
+	// D3D11_SAMPLER_DESC sampler_desc;
+	// ZeroMemory(&sampler_desc,sizeof(D3D11_SAMPLER_DESC));
+	// sampler_desc.Filter = D3D11_FILTER_ANISOTROPIC;
 
+	CD3D11_DEFAULT tmp;
+	CD3D11_SAMPLER_DESC sampler_desc(tmp);
 	Game::getInstance()->getDevice()->CreateSamplerState(&sampler_desc,cp_sampler_state.GetAddressOf());
 
 	shader = std::make_shared<Shader>( L"resource\\shaders\\basic_shader_vert.hlsl"
