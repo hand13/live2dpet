@@ -5,6 +5,13 @@ using DirectX::SimpleMath::Vector2;
 using DirectX::SimpleMath::Vector3;
 using DirectX::SimpleMath::Vector4;
 using DirectX::SimpleMath::Matrix;
+
+struct MVP {
+	Matrix model;
+	Matrix view;
+	Matrix perspective;
+};
+
 struct Data {
 	void * data;
 	Data():data(nullptr){}

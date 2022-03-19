@@ -1,18 +1,19 @@
 #include "sprite.h"
 #include <DirectXTK/WICTextureLoader.h>
+#include <iostream>
 
 static const float vertices[] = {
-	1,1,0,1,1
-	,-1,-1,0,0,0
-	,1,-1,0,1,0
-	,1,1,0,1,1
-	-1,1,0,0,1
-	-1,-1,0,0,0
+	1,1,1,1,1
+	,-1,-1,1,0,0
+	,1,-1,1,1,0
+	,1,1,1,1,1
+	-1,1,1,0,1
+	-1,-1,1,0,0
 };
 
 static D3D11_INPUT_ELEMENT_DESC ie_desc[] = {
-	{ "POISITION",0,DXGI_FORMAT_R32G32B32_FLOAT,0,0,D3D11_INPUT_PER_VERTEX_DATA,0},
-	{"TEXCOORD",0,DXGI_FORMAT_R32G32B32_FLOAT,0,12,D3D11_INPUT_PER_VERTEX_DATA,0}
+	{ "POSITION",0,DXGI_FORMAT_R32G32B32_FLOAT,0,0,D3D11_INPUT_PER_VERTEX_DATA,0},
+	{"TEXCOORD",0,DXGI_FORMAT_R32G32_FLOAT,0,12,D3D11_INPUT_PER_VERTEX_DATA,0}
 	};
 
 
@@ -21,10 +22,11 @@ SimpleSprite::SimpleSprite() {
 
 bool SimpleSprite::init(const wchar_t * texture_path,const Matrix& model_matrix) {
 	ComPtr<ID3D11Resource> resource;
-	DirectX::CreateWICTextureFromFile(Game::getInstance()->getDevice().Get(),texture_path
-	,resource.GetAddressOf(),cp_srv.GetAddressOf());
-
-
+	if(FAILED(DirectX::CreateWICTextureFromFile(Game::getInstance()->getDevice().Get(),texture_path
+	,resource.GetAddressOf(),cp_srv.GetAddressOf()))) {
+		std::cout<<"load texture failed"<<std::endl;
+		return false;
+	}
 
 	CD3D11_BUFFER_DESC buffer_desc(sizeof(vertices),D3D11_BIND_VERTEX_BUFFER);
 	D3D11_SUBRESOURCE_DATA sub;
@@ -55,6 +57,7 @@ bool SimpleSprite::init(const wchar_t * texture_path,const Matrix& model_matrix)
 	mvp.view = Game::getInstance()->getCamera().getViewMatrix();
 	mvp.perspective = Game::getInstance()->getPerspectiveMatrix();
 
+	return true;
 }
 
 

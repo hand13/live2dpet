@@ -27,6 +27,8 @@ bool Game::init() {
 
 	default_camera = Camera::defaultCamera();
 	createPerspectiveMatrix();
+	sprite = std::make_shared<SimpleSprite>();
+	sprite->init(L"resource/img/background.jpg",Matrix::Identity);
 
 	return true;
 }
@@ -142,6 +144,7 @@ void Game::render(){
 	FLOAT color[]={1.f,0.f,1.f,1.f};
 	cp_device_context->ClearRenderTargetView(cp_rtv.Get(),color);
 	//todo
+	sprite->render();
 }
 
 bool Game::handleEvent(HWND hWnd,UINT msg,WPARAM wParam,LPARAM lParam){

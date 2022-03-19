@@ -90,9 +90,10 @@ Camera::Camera(const Vector3 & position,float yaw,float pitch,const Vector3& up)
 }
 
 Camera Camera::defaultCamera() {
-	Vector3 pos = {0.f,0.f,3.f};
+
+	Vector3 pos = {0.f,0.f,-3.f};
 	Vector3 up = {0.f,1.f,0.f};
-	return Camera(pos,DirectX::XM_2PI/-4.0,0,up);
+	return Camera(pos,0,0,up);
 }
 
 Matrix Camera::getViewMatrix(){

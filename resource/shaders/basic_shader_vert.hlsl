@@ -7,12 +7,12 @@ cbuffer MVP : register(b0)
 struct VS_INPUT
 {
 	float3 vPos: POSITION;
-	float3 texCoord: TEXCOORD;
+	float2 texCoord: TEXCOORD;
 };
 
 struct PS_INPUT {
 	float4 vPos: POSITION;
-	float3 texCoord:TEXCOORD;
+	float2 texCoord:TEXCOORD;
 };
 
 PS_INPUT main(VS_INPUT input)

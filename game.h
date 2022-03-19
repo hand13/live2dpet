@@ -4,17 +4,14 @@
 #include <wrl/client.h>
 #include <DirectXTK/SimpleMath.h>
 #include "util.h"
+#include "sprite.h"
 using Microsoft::WRL::ComPtr;
 using DirectX::SimpleMath::Matrix;
 
-struct MVP {
-	Matrix model;
-	Matrix view;
-	Matrix perspective;
-};
+
+class SimpleSprite;
 
 class Game {
-
 	private:
 	static Game * INSTANCE;
 	HWND hWnd;
@@ -24,6 +21,7 @@ class Game {
 	ComPtr<IDXGISwapChain> cp_swap_chain;
 	Camera default_camera;
 	Matrix default_persperctive_matrix;
+	std::shared_ptr<SimpleSprite> sprite;
 	public:
 	Game();
 	static Game* getInstance();

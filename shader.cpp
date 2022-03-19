@@ -3,6 +3,7 @@
 #include <DirectXTK/Effects.h>
 #include "util.h"
 #include <d3dcompiler.h>
+#include <iostream>
 Shader Shader::load(const wchar_t* vs_path,const wchar_t * ps_path,D3D11_INPUT_ELEMENT_DESC * desc,int desc_num) {
 	return Shader(vs_path,ps_path,desc,desc_num);
 }
@@ -43,18 +44,19 @@ std::pair<ComPtr<ID3D11VertexShader>,ComPtr<ID3D11InputLayout>> Shader::load_ver
 }
 
 std::pair<ComPtr<ID3D11VertexShader>,ComPtr<ID3D11InputLayout>> Shader::load_vertex_shader_from_memory(const char* vs_code,size_t code_length,D3D11_INPUT_ELEMENT_DESC * desc,int desc_num) {
-	ID3DBlob *bytecode,*error;
-	D3DCompile(vs_code,code_length,"main",
-	NULL,NULL,"main",NULL,0,0,&bytecode,&error);
+	ComPtr<ID3DBlob> bytecode,error;
+	D3DCompile(vs_code,code_length,NULL,
+	NULL,NULL,"main","vs_5_0",0,0,&bytecode,&error);
 	if(error != nullptr) {
-		return std::pair(nullptr,nullptr);
+		return std::pair<ComPtr<ID3D11VertexShader>,ComPtr<ID3D11InputLayout>>(nullptr,nullptr);
 	}
 	ComPtr<ID3D11VertexShader> vs;
 	ComPtr<ID3D11InputLayout> il;
 	Game::getInstance()->getDevice()->CreateVertexShader(bytecode->GetBufferPointer(),
 	bytecode->GetBufferSize(),NULL,vs.GetAddressOf());
-	Game::getInstance()->getDevice()->CreateInputLayout(desc,desc_num,bytecode->GetBufferPointer(),bytecode->GetBufferSize(),il.GetAddressOf());
-	return std::pair(vs,il);
+
+	HRESULT hr = Game::getInstance()->getDevice()->CreateInputLayout(desc,desc_num,bytecode->GetBufferPointer(),bytecode->GetBufferSize(),il.GetAddressOf());
+	return std::pair<ComPtr<ID3D11VertexShader>,ComPtr<ID3D11InputLayout>>(vs,il);
 }
 
 ComPtr<ID3D11PixelShader> Shader::load_pixel_shader(const wchar_t* ps_path) {
@@ -64,8 +66,8 @@ ComPtr<ID3D11PixelShader> Shader::load_pixel_shader(const wchar_t* ps_path) {
 
 ComPtr<ID3D11PixelShader> Shader::load_pixel_shader_from_memory(const char* ps_code,size_t code_length) {
 	ID3DBlob *bytecode,*error;
-	D3DCompile(ps_code,code_length,"main",
-	NULL,NULL,"main",NULL,0,0,&bytecode,&error);
+	D3DCompile(ps_code,code_length,NULL,
+	NULL,NULL,"main","ps_5_0",0,0,&bytecode,&error);
 	if(error != nullptr) {
 		return nullptr;
 	}
