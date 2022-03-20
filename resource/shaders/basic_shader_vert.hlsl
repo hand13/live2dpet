@@ -21,9 +21,9 @@ PS_INPUT main(VS_INPUT input)
 	PS_INPUT OUTPUT;
 
 	float4 pos = float4(input.vPos,1.0f);
-	// pos = mul(pos,mWorld);
-	// pos = mul(pos,view);
-	// pos = mul(pos,projection);
+	pos = mul(mWorld,pos);
+	pos = mul(view,pos);
+	pos = mul(projection,pos);
 
 	OUTPUT.vPos = pos;
 	OUTPUT.texCoord = input.texCoord;

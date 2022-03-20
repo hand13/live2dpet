@@ -91,14 +91,13 @@ Camera::Camera(const Vector3 & position,float yaw,float pitch,const Vector3& up)
 
 Camera Camera::defaultCamera() {
 
-	Vector3 pos = {0.f,0.f,-3.f};
+	Vector3 pos = {0.f,0.f,0.5f};
 	Vector3 up = {0.f,1.f,0.f};
-	return Camera(pos,0,0,up);
+	return Camera(pos,-(DirectX::XM_PI/2.0),0,up);
 }
 
 Matrix Camera::getViewMatrix(){
-	return Matrix::Identity;
-	// return Matrix::CreateLookAt(position,Vector3(position + getDirection()),up);
+	return Matrix::CreateLookAt(position,Vector3(position + getDirection()),up);
 }
 
 void Camera::moveFront(float delta) {

@@ -41,6 +41,7 @@ class Game {
 	bool handleEvent(HWND hWnd,UINT msg,WPARAM wParam,LPARAM lParam);
 	void render();
 	void getWindowSize(UINT& width,UINT & height);
+	void getViewSize(UINT& width,UINT & height);
 	private:
 	bool createWindow();
 	bool createDevice();

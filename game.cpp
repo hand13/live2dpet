@@ -168,7 +168,7 @@ void Game::getWindowSize(UINT& width,UINT & height) {
 
 void Game::createPerspectiveMatrix() {
 	UINT x,y;
-	getWindowSize(x,y);
+	getViewSize(x,y);
 	default_persperctive_matrix = Matrix::CreatePerspectiveFieldOfView(3.1415f * 0.2f
 	,static_cast<float>(y)/static_cast<float>(x),0.1f,1000.f);
 }
@@ -177,8 +177,7 @@ Camera& Game::getCamera() {
 	return default_camera;
 }
 Matrix Game::getPerspectiveMatrix() {
-	return Matrix::Identity;
-	// return default_persperctive_matrix;
+	return default_persperctive_matrix;
 }
 
 void Game::setViewPort(){
@@ -187,3 +186,15 @@ void Game::setViewPort(){
 	&view_port
 	);
 }
+
+void Game::getViewSize(UINT& width,UINT& height) {
+	ID3D11Texture2D* pBackBuffer;
+	cp_swap_chain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+	D3D11_TEXTURE2D_DESC td;
+	pBackBuffer->GetDesc(&td);
+	width = td.Width;
+	height = td.Height;
+	pBackBuffer->Release();
+}
+
+
