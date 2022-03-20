@@ -92,7 +92,16 @@ bool Game::createRenderTargetView() {
 	ID3D11Texture2D* pBackBuffer;
 	cp_swap_chain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
     cp_device->CreateRenderTargetView(pBackBuffer, NULL,cp_rtv.ReleaseAndGetAddressOf());
-    pBackBuffer->Release();
+
+	ZeroMemory(&view_port, sizeof(D3D11_VIEWPORT));
+	D3D11_TEXTURE2D_DESC td;
+	pBackBuffer->GetDesc(&td);
+	view_port.Height = (float)(td.Height);
+	view_port.Width = (float) (td.Width);
+	view_port.MinDepth = 0;
+	view_port.MaxDepth = 1;
+
+	pBackBuffer->Release();
 	return true;
 }
 
@@ -117,8 +126,7 @@ void Game::show() {
 void Game::resize(UINT width,UINT heigth) {
 	cp_swap_chain->ResizeBuffers(0,width,heigth,DXGI_FORMAT_UNKNOWN,0);
 	createRenderTargetView();
-	std::cout<<"width is "<<width<<std::endl;
-	std::cout<<"height is "<<heigth<<std::endl;
+	setViewPort();
 }
 void Game::loop() {
 	bool done = false;
@@ -135,15 +143,14 @@ void Game::loop() {
 			break;
 		}
 		render();
-		cp_swap_chain->Present(1,0);
+		cp_swap_chain->Present(0,0);
 	}
 }
 
 void Game::render(){
-	cp_device_context->OMSetRenderTargets(1,cp_rtv.GetAddressOf(),nullptr);
-	FLOAT color[]={1.f,0.f,1.f,1.f};
-	cp_device_context->ClearRenderTargetView(cp_rtv.Get(),color);
-	//todo
+	float bc[] = {1.f,1.0f,1.f,1.f};
+	cp_device_context->ClearRenderTargetView(cp_rtv.Get(),bc);
+	cp_device_context->OMSetRenderTargets(1,cp_rtv.GetAddressOf(),NULL);
 	sprite->render();
 }
 
@@ -169,6 +176,14 @@ void Game::createPerspectiveMatrix() {
 Camera& Game::getCamera() {
 	return default_camera;
 }
-Matrix& Game::getPerspectiveMatrix() {
-	return default_persperctive_matrix;
+Matrix Game::getPerspectiveMatrix() {
+	return Matrix::Identity;
+	// return default_persperctive_matrix;
+}
+
+void Game::setViewPort(){
+	cp_device_context->RSSetViewports(
+	1,
+	&view_port
+	);
 }

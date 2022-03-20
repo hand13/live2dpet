@@ -97,7 +97,8 @@ Camera Camera::defaultCamera() {
 }
 
 Matrix Camera::getViewMatrix(){
-	return Matrix::CreateLookAt(position,Vector3(position + getDirection()),up);
+	return Matrix::Identity;
+	// return Matrix::CreateLookAt(position,Vector3(position + getDirection()),up);
 }
 
 void Camera::moveFront(float delta) {

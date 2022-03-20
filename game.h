@@ -18,10 +18,12 @@ class Game {
 	ComPtr<ID3D11Device> cp_device;
 	ComPtr<ID3D11DeviceContext> cp_device_context;
 	ComPtr<ID3D11RenderTargetView> cp_rtv;
+	ComPtr<ID3D11DepthStencilView> cp_dsv;
 	ComPtr<IDXGISwapChain> cp_swap_chain;
 	Camera default_camera;
 	Matrix default_persperctive_matrix;
 	std::shared_ptr<SimpleSprite> sprite;
+	D3D11_VIEWPORT view_port;
 	public:
 	Game();
 	static Game* getInstance();
@@ -31,7 +33,7 @@ class Game {
 	ComPtr<ID3D11RenderTargetView> getRTV();
 	ComPtr<IDXGISwapChain> getSwapChain();
 	Camera& getCamera();
-	Matrix& getPerspectiveMatrix();
+	Matrix getPerspectiveMatrix();
 	bool init();
 	void show();
 	void resize(UINT width,UINT height);
@@ -44,4 +46,5 @@ class Game {
 	bool createDevice();
 	bool createRenderTargetView();
 	void createPerspectiveMatrix();
+	void setViewPort();
 };

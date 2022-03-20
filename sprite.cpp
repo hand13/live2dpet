@@ -3,12 +3,12 @@
 #include <iostream>
 
 static const float vertices[] = {
-	1,1,1,1,1
-	,-1,-1,1,0,0
-	,1,-1,1,1,0
-	,1,1,1,1,1
-	-1,1,1,0,1
-	-1,-1,1,0,0
+	0.5,0.5,0,1,1
+	,0.5,-0.5,0	,1,0
+	,-0.5,-0.5,0	,0,0
+	,0.5,0.5,0	,1,1
+	,-0.5,-0.5,0	,0,0
+	,-0.5,0.5,0	,0,1
 };
 
 static D3D11_INPUT_ELEMENT_DESC ie_desc[] = {
@@ -21,6 +21,7 @@ SimpleSprite::SimpleSprite() {
 }
 
 bool SimpleSprite::init(const wchar_t * texture_path,const Matrix& model_matrix) {
+
 	ComPtr<ID3D11Resource> resource;
 	if(FAILED(DirectX::CreateWICTextureFromFile(Game::getInstance()->getDevice().Get(),texture_path
 	,resource.GetAddressOf(),cp_srv.GetAddressOf()))) {
@@ -40,13 +41,11 @@ bool SimpleSprite::init(const wchar_t * texture_path,const Matrix& model_matrix)
 	Game::getInstance()->getDevice()->CreateBuffer(&constant_buffer_desc,NULL,constant_buffer.GetAddressOf());
 
 
-	// D3D11_SAMPLER_DESC sampler_desc;
-	// ZeroMemory(&sampler_desc,sizeof(D3D11_SAMPLER_DESC));
-	// sampler_desc.Filter = D3D11_FILTER_ANISOTROPIC;
 
 	CD3D11_DEFAULT tmp;
 	CD3D11_SAMPLER_DESC sampler_desc(tmp);
 	Game::getInstance()->getDevice()->CreateSamplerState(&sampler_desc,cp_sampler_state.GetAddressOf());
+
 
 	shader = std::make_shared<Shader>( L"resource\\shaders\\basic_shader_vert.hlsl"
 	,L"resource\\shaders\\basic_shader_pixel.hlsl",ie_desc,2);
@@ -67,15 +66,19 @@ void SimpleSprite::render() {
 	auto context = game->getDeviceContext();
 	UINT a = 20;
 	UINT offset = 0;
+
 	context->UpdateSubresource(constant_buffer.Get(),NULL,NULL,&mvp,0,0);
 	context->IASetVertexBuffers(0,1,vertices_buffer.GetAddressOf(),&a,&offset);
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	context->IASetInputLayout(shader->getIL().Get());
 	context->VSSetShader(shader->getVS().Get(),nullptr,0);
 	context->PSSetShader(shader->getPS().Get(),nullptr,0);
+	context->PSSetShaderResources(0,1,cp_srv.GetAddressOf());
 	context->PSSetSamplers(0,1,cp_sampler_state.GetAddressOf());
 	context->VSSetConstantBuffers(0,1,constant_buffer.GetAddressOf());
+
 	context->Draw(6,0);
+
 }
 
 void SimpleSprite::setModelMatrix(const Matrix& matrix) {
