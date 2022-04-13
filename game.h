@@ -1,6 +1,7 @@
 #pragma once
 #include <Windows.h>
 #include <d3d11.h>
+#include <dcomp.h>
 #include <wrl/client.h>
 #include <DirectXTK/SimpleMath.h>
 #include "util.h"
@@ -19,7 +20,11 @@ class Game {
 	ComPtr<ID3D11DeviceContext> cp_device_context;
 	ComPtr<ID3D11RenderTargetView> cp_rtv;
 	ComPtr<ID3D11DepthStencilView> cp_dsv;
-	ComPtr<IDXGISwapChain> cp_swap_chain;
+	ComPtr<ID3D11DepthStencilState> cp_dss;
+	ComPtr<IDCompositionDevice> cp_dcd;
+	ComPtr<IDCompositionTarget> cp_dct;
+	ComPtr<IDCompositionVisual> cp_dcv;
+	ComPtr<IDXGISwapChain1> cp_swap_chain;
 	Camera default_camera;
 	Matrix default_persperctive_matrix;
 	std::shared_ptr<SimpleSprite> sprite;
@@ -31,7 +36,7 @@ class Game {
 	ComPtr<ID3D11Device> getDevice();
 	ComPtr<ID3D11DeviceContext> getDeviceContext();
 	ComPtr<ID3D11RenderTargetView> getRTV();
-	ComPtr<IDXGISwapChain> getSwapChain();
+	ComPtr<IDXGISwapChain1> getSwapChain();
 	Camera& getCamera();
 	Matrix getPerspectiveMatrix();
 	bool init();

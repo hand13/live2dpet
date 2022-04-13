@@ -1,5 +1,7 @@
 #include "game.h"
 #include <iostream>
+#include <dcomp.h>
+#include <uuids.h>
 Game* Game::INSTANCE = nullptr;
 Game* Game::getInstance() {
 	if(Game::INSTANCE == nullptr) {
@@ -59,36 +61,51 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 bool Game::createWindow() {
 	 WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, TEXT("showMe"), NULL };
     ::RegisterClassEx(&wc);
-    hWnd = ::CreateWindow(wc.lpszClassName, TEXT("such a title"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+    hWnd = ::CreateWindowEx(WS_EX_NOREDIRECTIONBITMAP,wc.lpszClassName, TEXT("such a title"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
 	return true;
 }
 
 bool Game::createDevice() {
-	DXGI_SWAP_CHAIN_DESC sd;
-	sd.BufferCount = 2;
-    sd.BufferDesc.Width = 0;
-    sd.BufferDesc.Height = 0;
-    sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    sd.BufferDesc.RefreshRate.Numerator = 60;
-    sd.BufferDesc.RefreshRate.Denominator = 1;
-    sd.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
-    sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    sd.OutputWindow = hWnd;
-    sd.SampleDesc.Count = 1;
-    sd.SampleDesc.Quality = 0;
-    sd.Windowed = TRUE;
-    sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+	HRESULT hr;
+	DXGI_SWAP_CHAIN_DESC1 description={};
+	description.Format           = DXGI_FORMAT_B8G8R8A8_UNORM;     
+	description.BufferUsage      = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	description.SwapEffect       = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+	description.BufferCount      = 2;                              
+	description.SampleDesc.Count = 1;                              
+	description.AlphaMode        = DXGI_ALPHA_MODE_PREMULTIPLIED;
+	RECT rect = {};
+	GetClientRect(hWnd, &rect);
+	description.Width  = rect.right - rect.left;  
+	description.Height = rect.bottom - rect.top;
 
     UINT createDeviceFlags = 0;
     //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     D3D_FEATURE_LEVEL featureLevel;
     const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
-    if (D3D11CreateDeviceAndSwapChain(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION, &sd, cp_swap_chain.GetAddressOf(),cp_device.GetAddressOf(), &featureLevel, cp_device_context.GetAddressOf()) != S_OK)
+    if (D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION,cp_device.GetAddressOf(), &featureLevel, cp_device_context.GetAddressOf()) != S_OK)
         return false;
+	
+	ComPtr<IDXGIDevice> dxgiDevice;
+	hr = cp_device.As(&dxgiDevice);
+	ComPtr<IDXGIFactory2>  dxFactory;
+	CreateDXGIFactory2( DXGI_CREATE_FACTORY_DEBUG, __uuidof(dxFactory), reinterpret_cast<void **>(dxFactory.GetAddressOf()));
+	hr = DCompositionCreateDevice(dxgiDevice.Get(),__uuidof(cp_dcd),reinterpret_cast<void**>(cp_dcd.GetAddressOf()));
+	hr = cp_dcd->CreateTargetForHwnd(hWnd,true,cp_dct.GetAddressOf());
+	hr = cp_dcd->CreateVisual(cp_dcv.GetAddressOf());
+
+	dxFactory->CreateSwapChainForComposition(dxgiDevice.Get(),
+                                            &description,
+                                            nullptr, // Don’t restrict
+                                            cp_swap_chain.GetAddressOf());
+
+
 	return createRenderTargetView();
 }
 
 bool Game::createRenderTargetView() {
+
+	HRESULT hr;
 	ID3D11Texture2D* pBackBuffer;
 	cp_swap_chain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
     cp_device->CreateRenderTargetView(pBackBuffer, NULL,cp_rtv.ReleaseAndGetAddressOf());
@@ -100,6 +117,19 @@ bool Game::createRenderTargetView() {
 	view_port.Width = (float) (td.Width);
 	view_port.MinDepth = 0;
 	view_port.MaxDepth = 1;
+
+	CD3D11_DEFAULT cd;
+	CD3D11_DEPTH_STENCIL_DESC sd(cd);
+	sd.DepthEnable = true;
+	hr = cp_device->CreateDepthStencilState(&sd,cp_dss.ReleaseAndGetAddressOf());
+
+	CD3D11_TEXTURE2D_DESC ttd(DXGI_FORMAT_D24_UNORM_S8_UINT,(float)(td.Width),(float)(td.Height));
+	ttd.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	ComPtr<ID3D11Texture2D> dt;
+	hr = cp_device->CreateTexture2D(&ttd,NULL,dt.GetAddressOf());
+
+	CD3D11_DEPTH_STENCIL_VIEW_DESC svd(D3D11_DSV_DIMENSION_TEXTURE2D);
+	hr = cp_device->CreateDepthStencilView(dt.Get(),&svd,cp_dsv.ReleaseAndGetAddressOf());
 
 	pBackBuffer->Release();
 	return true;
@@ -114,7 +144,7 @@ ComPtr<ID3D11DeviceContext> Game::getDeviceContext() {
 ComPtr<ID3D11RenderTargetView> Game::getRTV() {
 	return cp_rtv;
 }
-ComPtr<IDXGISwapChain> Game::getSwapChain() {
+ComPtr<IDXGISwapChain1> Game::getSwapChain() {
 	return cp_swap_chain;
 }
 
@@ -144,13 +174,18 @@ void Game::loop() {
 		}
 		render();
 		cp_swap_chain->Present(0,0);
+		cp_dcv->SetContent(cp_swap_chain.Get());
+		cp_dct->SetRoot(cp_dcv.Get());
+		cp_dcd->Commit();
 	}
 }
 
 void Game::render(){
-	float bc[] = {1.f,1.0f,1.f,1.f};
+	float bc[] = {0.f,0.0f,0.f,0.f};
 	cp_device_context->ClearRenderTargetView(cp_rtv.Get(),bc);
-	cp_device_context->OMSetRenderTargets(1,cp_rtv.GetAddressOf(),NULL);
+	cp_device_context->ClearDepthStencilView(cp_dsv.Get(),D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,1.f,0);
+	cp_device_context->OMSetRenderTargets(1,cp_rtv.GetAddressOf(),cp_dsv.Get());
+	cp_device_context->OMSetDepthStencilState(cp_dss.Get(),0);
 	sprite->render();
 }
 
