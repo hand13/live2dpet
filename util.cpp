@@ -40,6 +40,13 @@ size_t Buffer::getDataLength()const {
 
 Buffer::~Buffer() {
 }
+Buffer readFileToBufferA(const char* filename,int length) {
+    wchar_t tmp[1024];
+    ZeroMemory(tmp,sizeof(tmp));
+    MultiByteToWideChar(CP_ACP,0,filename,length,tmp,1024);
+    Buffer buffer = readFileToBuffer(tmp);
+	return buffer;
+}
 
 Buffer readFileToBuffer(const wchar_t* filename) {
 	Buffer result;
@@ -62,6 +69,7 @@ Buffer readFileToBuffer(const wchar_t* filename) {
 	
 	result.pushData(buffer,size);
 	free(buffer);
+	fclose(file);
 	return result;
 }
 
@@ -91,7 +99,7 @@ Camera::Camera(const Vector3 & position,float yaw,float pitch,const Vector3& up)
 
 Camera Camera::defaultCamera() {
 
-	Vector3 pos = {0.f,0.f,10.f};
+	Vector3 pos = {0.f,0.f,3.f};
 	Vector3 up = {0.f,1.f,0.f};
 	return Camera(pos,-(DirectX::XM_PI/2.0),0,up);
 }

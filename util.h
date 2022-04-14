@@ -36,6 +36,7 @@ class Buffer {
 	size_t getDataLength()const;
 };
 
+Buffer readFileToBufferA(const char* filename,int length);
 Buffer readFileToBuffer(const wchar_t* filename);
 
 class Timer {

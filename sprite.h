@@ -2,10 +2,14 @@
 #include <memory>
 #include "shader.h"
 #include "game.h"
+#include <memory>
+#include "LAppModel.hpp"
 
 class SimpleSprite {
 	private:
-	ComPtr<ID3D11ShaderResourceView> cp_srv;
+	CubismState cubismState;
+	std::unique_ptr<LAppModel> model;
+	// ComPtr<ID3D11ShaderResourceView> cp_srv;
 	ComPtr<ID3D11SamplerState> cp_sampler_state;
 	ComPtr<ID3D11Buffer> vertices_buffer;
 	ComPtr<ID3D11Buffer> constant_buffer;

@@ -181,11 +181,6 @@ void Game::loop() {
 }
 
 void Game::render(){
-	float bc[] = {0.f,0.0f,0.f,0.f};
-	cp_device_context->ClearRenderTargetView(cp_rtv.Get(),bc);
-	cp_device_context->ClearDepthStencilView(cp_dsv.Get(),D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,1.f,0);
-	cp_device_context->OMSetRenderTargets(1,cp_rtv.GetAddressOf(),cp_dsv.Get());
-	cp_device_context->OMSetDepthStencilState(cp_dss.Get(),0);
 	sprite->render();
 }
 

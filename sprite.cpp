@@ -1,14 +1,15 @@
 #include "sprite.h"
 #include <DirectXTK/WICTextureLoader.h>
+#include <Rendering/D3D11/CubismRenderer_D3D11.hpp>
 #include <iostream>
 
 static const float vertices[] = {
-	0.5,0.5,0,1,1
-	,0.5,-0.5,0	,1,0
-	,-0.5,-0.5,0	,0,0
-	,0.5,0.5,0	,1,1
-	,-0.5,-0.5,0	,0,0
-	,-0.5,0.5,0	,0,1
+	0.5,0.5,0,1,0
+	,0.5,-0.5,0	,1,1
+	,-0.5,-0.5,0	,0,1
+	,0.5,0.5,0	,1,0
+	,-0.5,-0.5,0	,0,1
+	,-0.5,0.5,0	,0,0
 };
 
 static D3D11_INPUT_ELEMENT_DESC ie_desc[] = {
@@ -22,12 +23,17 @@ SimpleSprite::SimpleSprite() {
 
 bool SimpleSprite::init(const wchar_t * texture_path,const Matrix& model_matrix) {
 
-	ComPtr<ID3D11Resource> resource;
-	if(FAILED(DirectX::CreateWICTextureFromFile(Game::getInstance()->getDevice().Get(),texture_path
-	,resource.GetAddressOf(),cp_srv.GetAddressOf()))) {
-		std::cout<<"load texture failed"<<std::endl;
-		return false;
-	}
+	// ComPtr<ID3D11Resource> resource;
+	// if(FAILED(DirectX::CreateWICTextureFromFile(Game::getInstance()->getDevice().Get(),texture_path
+	// ,resource.GetAddressOf(),cp_srv.GetAddressOf()))) {
+	// 	std::cout<<"load texture failed"<<std::endl;
+	// 	return false;
+	// }
+	cubismState.init(Game::getInstance()->getDevice().Get());
+	model = std::make_unique<LAppModel>(&cubismState);
+	model->LoadAssets("resource/Rice/","Rice.model3.json");
+	model->GetRenderBuffer().CreateOffscreenFrame(Game::getInstance()->getDevice().Get(),
+                    1280, 720);
 
 	CD3D11_BUFFER_DESC buffer_desc(sizeof(vertices),D3D11_BIND_VERTEX_BUFFER);
 	D3D11_SUBRESOURCE_DATA sub;
@@ -61,11 +67,26 @@ bool SimpleSprite::init(const wchar_t * texture_path,const Matrix& model_matrix)
 
 
 void SimpleSprite::render() {
+	static Timer timer;
 	Game* game = Game::getInstance();
 	auto device = game->getDevice();
 	auto context = game->getDeviceContext();
 	UINT a = 20;
 	UINT offset = 0;
+	Csm::CubismMatrix44 m;
+	m.SetMatrix((float*)Matrix::Identity.m);
+	Csm::Rendering::CubismRenderer_D3D11::StartFrame (device.Get(), context.Get(), 1280, 720);
+	model->GetRenderBuffer().BeginDraw(context.Get());
+	model->GetRenderBuffer().Clear(context.Get(),0,0,0,0);
+	model->Update(static_cast<float>(timer.delta())/1000.f);
+	model->Draw(m);
+	model->GetRenderBuffer().EndDraw(context.Get());
+
+	float bc[] = {0.f,0.0f,0.f,0.f};
+	context->ClearRenderTargetView(game->getRTV().Get(),bc);
+	// context->ClearDepthStencilView(cp_dsv.Get(),D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,1.f,0);
+	context->OMSetRenderTargets(1,game->getRTV().GetAddressOf(),NULL);
+	// context->OMSetDepthStencilState(cp_dss.Get(),0);
 
 	context->UpdateSubresource(constant_buffer.Get(),NULL,NULL,&mvp,0,0);
 	context->IASetVertexBuffers(0,1,vertices_buffer.GetAddressOf(),&a,&offset);
@@ -73,7 +94,8 @@ void SimpleSprite::render() {
 	context->IASetInputLayout(shader->getIL().Get());
 	context->VSSetShader(shader->getVS().Get(),nullptr,0);
 	context->PSSetShader(shader->getPS().Get(),nullptr,0);
-	context->PSSetShaderResources(0,1,cp_srv.GetAddressOf());
+	ID3D11ShaderResourceView * r = model->GetRenderBuffer().GetTextureView();
+	context->PSSetShaderResources(0,1,&r);
 	context->PSSetSamplers(0,1,cp_sampler_state.GetAddressOf());
 	context->VSSetConstantBuffers(0,1,constant_buffer.GetAddressOf());
 
