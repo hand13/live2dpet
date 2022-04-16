@@ -47,6 +47,11 @@ class Game {
 	void render();
 	void getWindowSize(UINT& width,UINT & height);
 	void getViewSize(UINT& width,UINT & height);
+	void calcNDCCoord(int screenx,int screeny,float& x,float& y);
+	inline SimpleSprite * getSprite(){
+		return sprite.get();
+	}
+	bool isTransparent(int x,int y);
 	private:
 	bool createWindow();
 	bool createDevice();

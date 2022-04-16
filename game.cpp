@@ -34,14 +34,65 @@ bool Game::init() {
 
 	return true;
 }
-
+void FinishedMotion(Csm::ACubismMotion* self) {
+	std::cout<<"ojbk"<<std::endl;
+	return;
+}
+void Game::calcNDCCoord(int screenx,int screeny,float& x,float& y) {
+	UINT width,height;
+	getWindowSize(width,height);
+	x = static_cast<float>(screenx)*2.f/static_cast<float>(width) - 1.f;
+	y = 1.f - static_cast<float>(screeny)*2.f/static_cast<float>(height);
+}
 static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+	static bool touched = false;
+	static POINT pos;
 	Game * instance = Game::getInstance();
 	if (instance->handleEvent(hWnd, msg, wParam, lParam))
         return true;
 
-    switch (msg)
-    {
+    switch (msg) {
+	case WM_LBUTTONDOWN:{
+		int x = LOWORD(lParam);
+		int y = HIWORD(lParam);
+		if(!instance->isTransparent(x,y)) {
+
+			touched = true;
+			RECT rect;
+			GetWindowRect(hWnd,&rect);
+			pos.x = rect.left + x;
+			pos.y = rect.top + y;
+			std::cout<<"hit me"<<std::endl;
+
+			float nx = 0.f,ny=0.f;
+			instance->calcNDCCoord(x,y,nx,ny);
+			LAppModel * model = instance->getSprite()->getModel();
+			if(model->isHit(nx,ny)) {
+				model->StartRandomMotion("TapBody",2,FinishedMotion);
+			}
+		}
+		break;
+	}
+	case WM_LBUTTONUP: {
+		touched = false;
+		break;
+	}
+	case WM_MOUSEMOVE:{
+		int x = LOWORD(lParam);
+		int y = HIWORD(lParam);
+		if((MK_LBUTTON == wParam) && touched) {
+			RECT rect;
+			GetWindowRect(hWnd,&rect);
+			POINT tmp;
+			tmp.x = rect.left + x;
+			tmp.y = rect.top + y;
+			int dx = tmp.x - pos.x;
+			int dy = tmp.y - pos.y;
+			pos = tmp;
+			MoveWindow(hWnd,rect.left + dx,rect.top + dy,800,800,false);
+		}
+		break;
+	}
     case WM_SIZE:
         if (instance->getDevice() != NULL && wParam != SIZE_MINIMIZED)
         {
@@ -59,9 +110,12 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
 }
 bool Game::createWindow() {
-	 WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, TEXT("showMe"), NULL };
+	 WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL)
+	 , NULL, NULL, NULL, NULL, TEXT("showMe"), NULL };
     ::RegisterClassEx(&wc);
-    hWnd = ::CreateWindowEx(WS_EX_NOREDIRECTIONBITMAP,wc.lpszClassName, TEXT("such a title"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+	int ws = 0;
+    hWnd = ::CreateWindowEx(WS_EX_NOREDIRECTIONBITMAP | WS_EX_TOPMOST,wc.lpszClassName
+	, TEXT("such a title"), WS_POPUP, 100, 100, 800, 800, NULL, NULL, wc.hInstance, NULL);
 	return true;
 }
 
@@ -80,7 +134,7 @@ bool Game::createDevice() {
 	description.Height = rect.bottom - rect.top;
 
     UINT createDeviceFlags = 0;
-    //createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
+    createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     D3D_FEATURE_LEVEL featureLevel;
     const D3D_FEATURE_LEVEL featureLevelArray[2] = { D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_0, };
     if (D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, createDeviceFlags, featureLevelArray, 2, D3D11_SDK_VERSION,cp_device.GetAddressOf(), &featureLevel, cp_device_context.GetAddressOf()) != S_OK)
@@ -94,7 +148,7 @@ bool Game::createDevice() {
 	hr = cp_dcd->CreateTargetForHwnd(hWnd,true,cp_dct.GetAddressOf());
 	hr = cp_dcd->CreateVisual(cp_dcv.GetAddressOf());
 
-	dxFactory->CreateSwapChainForComposition(dxgiDevice.Get(),
+	hr = dxFactory->CreateSwapChainForComposition(dxgiDevice.Get(),
                                             &description,
                                             nullptr, // Don’t restrict
                                             cp_swap_chain.GetAddressOf());
@@ -154,9 +208,10 @@ void Game::show() {
 }
 
 void Game::resize(UINT width,UINT heigth) {
-	cp_swap_chain->ResizeBuffers(0,width,heigth,DXGI_FORMAT_UNKNOWN,0);
+	cp_rtv = nullptr;
+	HRESULT hr = cp_swap_chain->ResizeBuffers(2,width,heigth,DXGI_FORMAT_UNKNOWN,0);
 	createRenderTargetView();
-	setViewPort();
+	// setViewPort();
 }
 void Game::loop() {
 	bool done = false;
@@ -181,7 +236,36 @@ void Game::loop() {
 }
 
 void Game::render(){
+	setViewPort();
 	sprite->render();
+}
+
+bool Game::isTransparent(int x,int y) {
+	bool result = true;
+	ComPtr<ID3D11Resource> res;
+	D3D11_MAPPED_SUBRESOURCE sub;
+	ZeroMemory(&sub,sizeof(sub));
+	cp_rtv->GetResource(res.GetAddressOf());
+	ComPtr<ID3D11Texture2D> pTexture;
+	HRESULT hr = res->QueryInterface(IID_PPV_ARGS(pTexture.GetAddressOf()));
+	ComPtr<ID3D11Texture2D> pStaging;
+	D3D11_TEXTURE2D_DESC desc;
+	pTexture->GetDesc(&desc);
+	desc.BindFlags = 0;
+	// desc.MiscFlags &= D3D11_RESOURCE_MISC_TEXTURECUBE;
+	desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+	desc.Usage = D3D11_USAGE_STAGING;
+	cp_device->CreateTexture2D(&desc, nullptr, pStaging.ReleaseAndGetAddressOf());
+	cp_device_context->CopyResource(pStaging.Get(), res.Get());
+	hr =  cp_device_context->Map(pStaging.Get(),0,D3D11_MAP_READ,0,&sub);
+	unsigned char * mem = reinterpret_cast<unsigned char*>(sub.pData);
+	int index = sub.RowPitch * y + x * 4 + 3;
+	if(index < sub.DepthPitch) {
+		unsigned char alpha = mem[sub.RowPitch * y + x*4 + 3];
+		result = alpha == 0;
+	}
+	cp_device_context->Unmap(pStaging.Get(),0);
+	return result;
 }
 
 bool Game::handleEvent(HWND hWnd,UINT msg,WPARAM wParam,LPARAM lParam){

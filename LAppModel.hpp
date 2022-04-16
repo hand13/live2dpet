@@ -129,6 +129,7 @@ public:
      * @param[in]   y               判定を行うY座標
      */
     virtual Csm::csmBool HitTest(const Csm::csmChar* hitAreaName, Csm::csmFloat32 x, Csm::csmFloat32 y);
+    bool isHit(float x,float y);
 
     /**
      * @brief   モデルに削除マークを付ける

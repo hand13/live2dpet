@@ -21,4 +21,7 @@ class SimpleSprite {
 	bool init(const wchar_t * texture_path,const Matrix& matrix);
 	void render();
 	void setModelMatrix(const Matrix& matrix);
+	inline LAppModel * getModel(){
+		return model.get();
+	}
 };

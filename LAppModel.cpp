@@ -494,3 +494,13 @@ void LAppModel::MotionEventFired(const csmString& eventValue) {
 Csm::Rendering::CubismOffscreenFrame_D3D11& LAppModel::GetRenderBuffer() {
     return _renderBuffer;
 }
+bool LAppModel::isHit(float x,float y) {
+    int count = _modelSetting->GetHitAreasCount();
+    for (int i = 0; i < count; i++) {
+        const CubismIdHandle drawID = _modelSetting->GetHitAreaId(i);
+        if(IsHit(drawID,x,y)) {
+            return true;
+        }
+    }
+    return false;
+}

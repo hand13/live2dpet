@@ -4,12 +4,12 @@
 #include <iostream>
 
 static const float vertices[] = {
-	0.5,0.5,0,1,0
-	,0.5,-0.5,0	,1,1
-	,-0.5,-0.5,0	,0,1
-	,0.5,0.5,0	,1,0
-	,-0.5,-0.5,0	,0,1
-	,-0.5,0.5,0	,0,0
+	1.f,1.f,0,1,0
+	,1.f,-1.f,0	,1,1
+	,-1.f,-1.f,0	,0,1
+	,1.f,1.f,0	,1,0
+	,-1.f,-1.f,0	,0,1
+	,-1.f,1.f,0	,0,0
 };
 
 static D3D11_INPUT_ELEMENT_DESC ie_desc[] = {
@@ -33,7 +33,7 @@ bool SimpleSprite::init(const wchar_t * texture_path,const Matrix& model_matrix)
 	model = std::make_unique<LAppModel>(&cubismState);
 	model->LoadAssets("resource/Rice/","Rice.model3.json");
 	model->GetRenderBuffer().CreateOffscreenFrame(Game::getInstance()->getDevice().Get(),
-                    1280, 720);
+                    1600, 1600);
 
 	CD3D11_BUFFER_DESC buffer_desc(sizeof(vertices),D3D11_BIND_VERTEX_BUFFER);
 	D3D11_SUBRESOURCE_DATA sub;
@@ -58,10 +58,12 @@ bool SimpleSprite::init(const wchar_t * texture_path,const Matrix& model_matrix)
 
 	this->model_matrix = model_matrix;
 
-	mvp.model = model_matrix;
-	mvp.view = Game::getInstance()->getCamera().getViewMatrix();
-	mvp.perspective = Game::getInstance()->getPerspectiveMatrix();
-
+	// mvp.model = model_matrix;
+	// mvp.view = Game::getInstance()->getCamera().getViewMatrix();
+	// mvp.perspective = Game::getInstance()->getPerspectiveMatrix();
+	mvp.model = Matrix::Identity;
+	mvp.view = Matrix::Identity;
+	mvp.perspective = Matrix::Identity;
 	return true;
 }
 
@@ -75,7 +77,7 @@ void SimpleSprite::render() {
 	UINT offset = 0;
 	Csm::CubismMatrix44 m;
 	m.SetMatrix((float*)Matrix::Identity.m);
-	Csm::Rendering::CubismRenderer_D3D11::StartFrame (device.Get(), context.Get(), 1280, 720);
+	Csm::Rendering::CubismRenderer_D3D11::StartFrame (device.Get(), context.Get(), 1600, 1600);
 	model->GetRenderBuffer().BeginDraw(context.Get());
 	model->GetRenderBuffer().Clear(context.Get(),0,0,0,0);
 	model->Update(static_cast<float>(timer.delta())/1000.f);
