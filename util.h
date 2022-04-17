@@ -22,6 +22,12 @@ struct Data {
 	}
 };
 
+inline void ThrowIf(HRESULT hr) {
+	if(FAILED(hr)) {
+		throw hr;
+	}
+}
+
 class Buffer {
 	private:
 	std::shared_ptr<Data> buffer;

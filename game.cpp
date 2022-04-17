@@ -35,8 +35,6 @@ bool Game::init() {
 	return true;
 }
 void FinishedMotion(Csm::ACubismMotion* self) {
-	std::cout<<"ojbk"<<std::endl;
-	return;
 }
 void Game::calcNDCCoord(int screenx,int screeny,float& x,float& y) {
 	UINT width,height;
@@ -62,7 +60,6 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			GetWindowRect(hWnd,&rect);
 			pos.x = rect.left + x;
 			pos.y = rect.top + y;
-			std::cout<<"hit me"<<std::endl;
 
 			float nx = 0.f,ny=0.f;
 			instance->calcNDCCoord(x,y,nx,ny);
@@ -112,6 +109,7 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 bool Game::createWindow() {
 	 WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL)
 	 , NULL, NULL, NULL, NULL, TEXT("showMe"), NULL };
+	 wc.hCursor = LoadCursor(NULL,IDC_ARROW);
     ::RegisterClassEx(&wc);
 	int ws = 0;
     hWnd = ::CreateWindowEx(WS_EX_NOREDIRECTIONBITMAP | WS_EX_TOPMOST,wc.lpszClassName
@@ -177,7 +175,7 @@ bool Game::createRenderTargetView() {
 	sd.DepthEnable = true;
 	hr = cp_device->CreateDepthStencilState(&sd,cp_dss.ReleaseAndGetAddressOf());
 
-	CD3D11_TEXTURE2D_DESC ttd(DXGI_FORMAT_D24_UNORM_S8_UINT,(float)(td.Width),(float)(td.Height));
+	CD3D11_TEXTURE2D_DESC ttd(DXGI_FORMAT_D24_UNORM_S8_UINT,td.Width,td.Height);
 	ttd.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 	ComPtr<ID3D11Texture2D> dt;
 	hr = cp_device->CreateTexture2D(&ttd,NULL,dt.GetAddressOf());
@@ -259,7 +257,7 @@ bool Game::isTransparent(int x,int y) {
 	cp_device_context->CopyResource(pStaging.Get(), res.Get());
 	hr =  cp_device_context->Map(pStaging.Get(),0,D3D11_MAP_READ,0,&sub);
 	unsigned char * mem = reinterpret_cast<unsigned char*>(sub.pData);
-	int index = sub.RowPitch * y + x * 4 + 3;
+	UINT index = sub.RowPitch * y + x * 4 + 3;
 	if(index < sub.DepthPitch) {
 		unsigned char alpha = mem[sub.RowPitch * y + x*4 + 3];
 		result = alpha == 0;
