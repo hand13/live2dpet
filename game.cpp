@@ -53,30 +53,39 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_LBUTTONDOWN:{
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
-		if(!instance->isTransparent(x,y)) {
+		if(instance->tryRedirect(x,y,hWnd,msg,wParam,lParam)) {
+			break;
+		}
 
-			touched = true;
-			RECT rect;
-			GetWindowRect(hWnd,&rect);
-			pos.x = rect.left + x;
-			pos.y = rect.top + y;
+		touched = true;
+		RECT rect;
+		GetWindowRect(hWnd,&rect);
+		pos.x = rect.left + x;
+		pos.y = rect.top + y;
 
-			float nx = 0.f,ny=0.f;
-			instance->calcNDCCoord(x,y,nx,ny);
-			LAppModel * model = instance->getSprite()->getModel();
-			if(model->isHit(nx,ny)) {
-				model->StartRandomMotion("TapBody",2,FinishedMotion);
-			}
+		float nx = 0.f,ny=0.f;
+		instance->calcNDCCoord(x,y,nx,ny);
+		LAppModel * model = instance->getSprite()->getModel();
+		if(model->isHit(nx,ny)) {
+			model->StartRandomMotion("TapBody",2,FinishedMotion);
 		}
 		break;
 	}
 	case WM_LBUTTONUP: {
 		touched = false;
+		int x = LOWORD(lParam);
+		int y = HIWORD(lParam);
+		if(instance->tryRedirect(x,y,hWnd,msg,wParam,lParam)) {
+			break;
+		}
 		break;
 	}
 	case WM_MOUSEMOVE:{
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
+		if(instance->tryRedirect(x,y,hWnd,msg,wParam,lParam)) {
+			break;
+		}
 		if((MK_LBUTTON == wParam) && touched) {
 			RECT rect;
 			GetWindowRect(hWnd,&rect);
@@ -113,7 +122,7 @@ bool Game::createWindow() {
     ::RegisterClassEx(&wc);
 	int ws = 0;
     hWnd = ::CreateWindowEx(WS_EX_NOREDIRECTIONBITMAP | WS_EX_TOPMOST,wc.lpszClassName
-	, TEXT("such a title"), WS_POPUP, 100, 100, 800, 800, NULL, NULL, wc.hInstance, NULL);
+	, TEXT("such a title"), WS_POPUP, 800, 200, 800, 800, NULL, NULL, wc.hInstance, NULL);
 	return true;
 }
 
@@ -310,3 +319,50 @@ void Game::getViewSize(UINT& width,UINT& height) {
 }
 
 
+HWND Game::findNearWindow(int x,int y) {
+	RECT rect;
+	POINT point;
+	GetWindowRect(hWnd,&rect);
+	point.x = rect.left + x;
+	point.y = rect.top + y;
+	HWND result = NULL;
+	HWND dh = hWnd;
+	wchar_t buffer[512];
+	ZeroMemory(buffer,sizeof(buffer));
+	while(dh != NULL) {
+		if(dh != hWnd && IsWindowVisible(dh)) {
+			RECT tr;
+			GetWindowRect(dh,&tr);
+			if(point.x >tr.left && point.x < tr.right && point.y > tr.top && point.y < tr.bottom) {
+				int length = GetWindowTextW(dh,buffer,512);
+				if(length >= 0) {
+					if(wcscmp(L"QQ",buffer) != 0) {
+						result = dh;
+						break;
+					}
+				}else {
+					result = dh;
+					break;
+				}
+			}
+		}
+		dh = GetNextWindow(dh,GW_HWNDNEXT);
+	}
+	return result;
+}
+
+bool Game::tryRedirect(int x,int y,HWND,UINT msg,WPARAM wParam,LPARAM lParam){
+	if(isTransparent(x,y)) {
+		HWND next =findNearWindow(x,y);
+		if(next != NULL) {
+			RECT nr,tt;
+			GetWindowRect(next,&nr);
+			GetWindowRect(hWnd,&tt);
+			UINT nx = tt.left + x - nr.left;
+			UINT ny = tt.top + y - nr.top;
+			SendMessage(next,msg,wParam,MAKELPARAM(nx,ny));
+		}
+		return true;
+	}
+	return false;
+}
