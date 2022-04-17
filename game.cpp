@@ -60,6 +60,7 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 bool Game::createWindow() {
 	 WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, TEXT("showMe"), NULL };
+	 wc.hCursor = LoadCursor(NULL,IDC_ARROW);
     ::RegisterClassEx(&wc);
     hWnd = ::CreateWindowEx(WS_EX_NOREDIRECTIONBITMAP,wc.lpszClassName, TEXT("such a title"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
 	return true;
