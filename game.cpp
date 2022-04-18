@@ -50,12 +50,22 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return true;
 
     switch (msg) {
+	case WM_NCHITTEST:{
+			int x = LOWORD(lParam);
+			int y = HIWORD(lParam);
+			RECT wr;
+			GetWindowRect(hWnd,&wr);
+			if(instance->isTransparent(x - wr.left,y - wr.top)) {
+				return HTTRANSPARENT;
+			}
+			break;
+	}
 	case WM_LBUTTONDOWN:{
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
-		if(instance->tryRedirect(x,y,hWnd,msg,wParam,lParam)) {
-			break;
-		}
+		// if(instance->tryRedirect(x,y,hWnd,msg,wParam,lParam)) {
+		// 	break;
+		// }
 
 		touched = true;
 		RECT rect;
