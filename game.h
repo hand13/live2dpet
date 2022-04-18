@@ -52,12 +52,12 @@ class Game {
 		return sprite.get();
 	}
 	bool isTransparent(int x,int y);
-	bool tryRedirect(int x,int y,HWND,UINT msg,WPARAM wParam,LPARAM lParam);
+	HWND findNearWindow(int x,int y);
+	bool tryRedirect(HWND,UINT msg,WPARAM wParam,LPARAM lParam,bool absolutely);
 	private:
 	bool createWindow();
 	bool createDevice();
 	bool createRenderTargetView();
 	void createPerspectiveMatrix();
 	void setViewPort();
-	HWND findNearWindow(int x,int y);
 };

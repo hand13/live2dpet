@@ -50,22 +50,12 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return true;
 
     switch (msg) {
-	case WM_NCHITTEST:{
-			int x = LOWORD(lParam);
-			int y = HIWORD(lParam);
-			RECT wr;
-			GetWindowRect(hWnd,&wr);
-			if(instance->isTransparent(x - wr.left,y - wr.top)) {
-				return HTTRANSPARENT;
-			}
-			break;
-	}
 	case WM_LBUTTONDOWN:{
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
-		// if(instance->tryRedirect(x,y,hWnd,msg,wParam,lParam)) {
-		// 	break;
-		// }
+		if(instance->tryRedirect(hWnd,msg,wParam,lParam,false)) {
+			break;
+		}
 
 		touched = true;
 		RECT rect;
@@ -81,11 +71,25 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	}
+	case WM_MOUSEWHEEL:{
+		int x = LOWORD(lParam);
+		int y = HIWORD(lParam);
+		RECT tmp;
+		GetWindowRect(hWnd,&tmp);
+		if(instance->tryRedirect(hWnd,msg,wParam,lParam,true)) {
+			break;
+		}
+		break;
+	}
+
+	case WM_RBUTTONDBLCLK:
+	case WM_RBUTTONDOWN:
+	case WM_RBUTTONUP:
 	case WM_LBUTTONUP: {
 		touched = false;
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
-		if(instance->tryRedirect(x,y,hWnd,msg,wParam,lParam)) {
+		if(instance->tryRedirect(hWnd,msg,wParam,lParam,false)) {
 			break;
 		}
 		break;
@@ -93,7 +97,7 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_MOUSEMOVE:{
 		int x = LOWORD(lParam);
 		int y = HIWORD(lParam);
-		if(instance->tryRedirect(x,y,hWnd,msg,wParam,lParam)) {
+		if(instance->tryRedirect(hWnd,msg,wParam,lParam,false)) {
 			break;
 		}
 		if((MK_LBUTTON == wParam) && touched) {
@@ -105,7 +109,7 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			int dx = tmp.x - pos.x;
 			int dy = tmp.y - pos.y;
 			pos = tmp;
-			MoveWindow(hWnd,rect.left + dx,rect.top + dy,800,800,false);
+			MoveWindow(hWnd,rect.left + dx,rect.top + dy,600,600,false);
 		}
 		break;
 	}
@@ -132,7 +136,7 @@ bool Game::createWindow() {
     ::RegisterClassEx(&wc);
 	int ws = 0;
     hWnd = ::CreateWindowEx(WS_EX_NOREDIRECTIONBITMAP | WS_EX_TOPMOST,wc.lpszClassName
-	, TEXT("such a title"), WS_POPUP, 800, 200, 800, 800, NULL, NULL, wc.hInstance, NULL);
+	, TEXT("such a title"), WS_POPUP, 800, 200, 600, 600, NULL, NULL, wc.hInstance, NULL);
 	return true;
 }
 
@@ -361,16 +365,28 @@ HWND Game::findNearWindow(int x,int y) {
 	return result;
 }
 
-bool Game::tryRedirect(int x,int y,HWND,UINT msg,WPARAM wParam,LPARAM lParam){
+bool Game::tryRedirect(HWND,UINT msg,WPARAM wParam,LPARAM lParam,bool absolutely){
+	int x = LOWORD(lParam);
+	int y = HIWORD(lParam);
+	RECT wr;
+	GetWindowRect(hWnd,&wr);
+	if(absolutely) {
+		x = x - wr.left;
+		y = y - wr.top;
+	}
 	if(isTransparent(x,y)) {
 		HWND next =findNearWindow(x,y);
 		if(next != NULL) {
-			RECT nr,tt;
-			GetWindowRect(next,&nr);
-			GetWindowRect(hWnd,&tt);
-			UINT nx = tt.left + x - nr.left;
-			UINT ny = tt.top + y - nr.top;
-			SendMessage(next,msg,wParam,MAKELPARAM(nx,ny));
+			if(absolutely) {
+				SendMessage(next,msg,wParam,lParam);
+			}else {
+				RECT nr,tt;
+				GetWindowRect(next,&nr);
+				GetWindowRect(hWnd,&tt);
+				UINT nx = tt.left + x - nr.left;
+				UINT ny = tt.top + y - nr.top;
+				SendMessage(next,msg,wParam,MAKELPARAM(nx,ny));
+			}
 		}
 		return true;
 	}
