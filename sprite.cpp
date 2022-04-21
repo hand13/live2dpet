@@ -1,7 +1,9 @@
 #include "sprite.h"
 #include <DirectXTK/WICTextureLoader.h>
+#include <DirectXTK/SpriteFont.h>
 #include <Rendering/D3D11/CubismRenderer_D3D11.hpp>
 #include <iostream>
+
 
 static const float vertices[] = {
 	1.f,1.f,0,1,0
@@ -18,23 +20,7 @@ static D3D11_INPUT_ELEMENT_DESC ie_desc[] = {
 	};
 
 
-SimpleSprite::SimpleSprite() {
-}
-
-bool SimpleSprite::init(const wchar_t * texture_path,const Matrix& model_matrix) {
-
-	// ComPtr<ID3D11Resource> resource;
-	// if(FAILED(DirectX::CreateWICTextureFromFile(Game::getInstance()->getDevice().Get(),texture_path
-	// ,resource.GetAddressOf(),cp_srv.GetAddressOf()))) {
-	// 	std::cout<<"load texture failed"<<std::endl;
-	// 	return false;
-	// }
-	cubismState.init(Game::getInstance()->getDevice().Get());
-	model = std::make_unique<LAppModel>(&cubismState);
-	model->LoadAssets("resource/Rice/","Rice.model3.json");
-	model->GetRenderBuffer().CreateOffscreenFrame(Game::getInstance()->getDevice().Get(),
-                    1600, 1600);
-
+bool Sprite::init() {
 	CD3D11_BUFFER_DESC buffer_desc(sizeof(vertices),D3D11_BIND_VERTEX_BUFFER);
 	D3D11_SUBRESOURCE_DATA sub;
 	ZeroMemory(&sub,sizeof(D3D11_SUBRESOURCE_DATA));
@@ -46,8 +32,6 @@ bool SimpleSprite::init(const wchar_t * texture_path,const Matrix& model_matrix)
 	CD3D11_BUFFER_DESC constant_buffer_desc(sizeof(MVP),D3D11_BIND_CONSTANT_BUFFER);
 	Game::getInstance()->getDevice()->CreateBuffer(&constant_buffer_desc,NULL,constant_buffer.GetAddressOf());
 
-
-
 	CD3D11_DEFAULT tmp;
 	CD3D11_SAMPLER_DESC sampler_desc(tmp);
 	Game::getInstance()->getDevice()->CreateSamplerState(&sampler_desc,cp_sampler_state.GetAddressOf());
@@ -57,54 +41,90 @@ bool SimpleSprite::init(const wchar_t * texture_path,const Matrix& model_matrix)
 	,L"resource\\shaders\\basic_shader_pixel.hlsl",ie_desc,2);
 
 	this->model_matrix = model_matrix;
-
-	// mvp.model = model_matrix;
-	// mvp.view = Game::getInstance()->getCamera().getViewMatrix();
-	// mvp.perspective = Game::getInstance()->getPerspectiveMatrix();
-	mvp.model = Matrix::Identity;
-	mvp.view = Matrix::Identity;
-	mvp.perspective = Matrix::Identity;
+	mvp.model = model_matrix;
+	mvp.view = Game::getInstance()->getCamera().getViewMatrix();
+	mvp.perspective = Game::getInstance()->getPerspectiveMatrix();
 	return true;
 }
 
-
-void SimpleSprite::render() {
-	static Timer timer;
-	Game* game = Game::getInstance();
+void Sprite::render() {
+	Game * game =Game::getInstance();
 	auto device = game->getDevice();
 	auto context = game->getDeviceContext();
 	UINT a = 20;
 	UINT offset = 0;
-	Csm::CubismMatrix44 m;
-	m.SetMatrix((float*)Matrix::Identity.m);
-	Csm::Rendering::CubismRenderer_D3D11::StartFrame (device.Get(), context.Get(), 1600, 1600);
-	model->GetRenderBuffer().BeginDraw(context.Get());
-	model->GetRenderBuffer().Clear(context.Get(),0,0,0,0);
-	model->Update(static_cast<float>(timer.delta())/1000.f);
-	model->Draw(m);
-	model->GetRenderBuffer().EndDraw(context.Get());
-
-	float bc[] = {0.f,0.0f,0.f,0.f};
-	context->ClearRenderTargetView(game->getRTV().Get(),bc);
-	// context->ClearDepthStencilView(cp_dsv.Get(),D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,1.f,0);
-	context->OMSetRenderTargets(1,game->getRTV().GetAddressOf(),NULL);
-	// context->OMSetDepthStencilState(cp_dss.Get(),0);
-
 	context->UpdateSubresource(constant_buffer.Get(),NULL,NULL,&mvp,0,0);
 	context->IASetVertexBuffers(0,1,vertices_buffer.GetAddressOf(),&a,&offset);
 	context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	context->IASetInputLayout(shader->getIL().Get());
 	context->VSSetShader(shader->getVS().Get(),nullptr,0);
 	context->PSSetShader(shader->getPS().Get(),nullptr,0);
-	ID3D11ShaderResourceView * r = model->GetRenderBuffer().GetTextureView();
-	context->PSSetShaderResources(0,1,&r);
+	ID3D11ShaderResourceView * srv = getTexture();
+	context->PSSetShaderResources(0,1,&srv);
 	context->PSSetSamplers(0,1,cp_sampler_state.GetAddressOf());
 	context->VSSetConstantBuffers(0,1,constant_buffer.GetAddressOf());
-
 	context->Draw(6,0);
 
 }
 
-void SimpleSprite::setModelMatrix(const Matrix& matrix) {
+void Sprite::setModelMatrix(const Matrix& matrix) {
 	model_matrix = matrix;
+}
+
+SimpleSprite::SimpleSprite() {
+}
+
+bool SimpleSprite::init(const char * resourceDir,const char * jsonName,const Matrix& model_matrix) {
+	Sprite::init();
+	cubismState.init(Game::getInstance()->getDevice().Get());
+	model = std::make_unique<LAppModel>(&cubismState);
+	model->LoadAssets(resourceDir,jsonName);
+	model->GetRenderBuffer().CreateOffscreenFrame(Game::getInstance()->getDevice().Get(),
+                    1600, 1600);
+
+	mvp.model = Matrix::Identity;
+	mvp.view = Matrix::Identity;
+	mvp.perspective = Matrix::Identity;
+	return true;
+}
+
+void SimpleSprite::update(int delta) {
+	Game* game = Game::getInstance();
+	float eyeX = 0.f,eyeY = 0.f;
+	model->getEyePos(eyeX,eyeY);
+	POINT cp;
+	GetCursorPos(&cp);
+	RECT rect;
+	GetWindowRect(game->getHWND(),&rect);
+	cp.x = cp.x - rect.left;
+	if(cp.x < rect.left) {
+		cp.x = 0;
+	}else if(cp.x >rect.right) {
+		cp.y = rect.right;
+	}
+	cp.y = cp.y - rect.top;
+	if(cp.y < rect.top) {
+		cp.y = rect.top;
+	}else if(cp.y > rect.bottom) {
+		cp.y = rect.bottom;
+	}
+	float drx,dry;
+	game->calcNDCCoord(cp.x,cp.y,drx,dry);
+	model->SetDragging(drx,dry);
+
+	auto device = game->getDevice();
+	auto context = game->getDeviceContext();
+	Csm::CubismMatrix44 m;
+	m.SetMatrix((float*)Matrix::Identity.m);
+
+	Csm::Rendering::CubismRenderer_D3D11::StartFrame (device.Get(), context.Get(), 1600, 1600);
+	model->GetRenderBuffer().BeginDraw(context.Get());
+	model->GetRenderBuffer().Clear(context.Get(),0,0,0,0);
+	model->Update(static_cast<float>(delta)/1000.f);
+	model->Draw(m);
+	model->GetRenderBuffer().EndDraw(context.Get());
+
+}
+ID3D11ShaderResourceView * SimpleSprite::getTexture() {
+	return model->GetRenderBuffer().GetTextureView();
 }

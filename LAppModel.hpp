@@ -16,6 +16,7 @@
 #include <string>
 #include <wrl/client.h>
 #include <vector>
+#include <fstream>
 using Microsoft::WRL::ComPtr;
 
 
@@ -25,12 +26,14 @@ using Microsoft::WRL::ComPtr;
  *
  */
 
+
 class CubismState {
     private:
     Csm::ICubismAllocator * allocator = nullptr;
     Csm::CubismFramework::Option option;
     ID3D11Device * device;
     public:
+    static std::ofstream* ofs;
     inline ID3D11Device * getDevice() {
         return device;
     }
@@ -38,6 +41,9 @@ class CubismState {
     ~CubismState(){
         if(allocator!= nullptr){
             delete allocator;
+        }
+        if(ofs != nullptr) {
+            delete ofs;
         }
     }
 };
@@ -101,6 +107,8 @@ public:
      */
     Csm::CubismMotionQueueEntryHandle StartRandomMotion(const Csm::csmChar* group, Csm::csmInt32 priority, Csm::ACubismMotion::FinishedMotionCallback onFinishedMotionHandler = NULL);
 
+    Csm::CubismMotionQueueEntryHandle StartMotionByMotionName(const Csm::csmChar* group,const char * motionName, Csm::csmInt32 priority, Csm::ACubismMotion::FinishedMotionCallback onFinishedMotionHandler = NULL);
+
     /**
      * @brief   引数で指定した表情モーションをセットする
      *
@@ -129,7 +137,11 @@ public:
      * @param[in]   y               判定を行うY座標
      */
     virtual Csm::csmBool HitTest(const Csm::csmChar* hitAreaName, Csm::csmFloat32 x, Csm::csmFloat32 y);
+
     bool isHit(float x,float y);
+
+    void getEyePos(float&x,float &y);
+
 
     /**
      * @brief   モデルに削除マークを付ける

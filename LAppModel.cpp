@@ -6,7 +6,6 @@
  */
 
 #include "LAppModel.hpp"
-#include <fstream>
 #include <vector>
 #include <CubismModelSettingJson.hpp>
 #include <Motion/CubismMotion.hpp>
@@ -24,13 +23,17 @@
 using namespace Live2D::Cubism::Framework;
 using namespace Live2D::Cubism::Framework::DefaultParameterId;
 
+std::ofstream * CubismState::ofs = nullptr;
+
 void printLog(const char * message) {
     std::cout<<message<<std::endl;
+    *(CubismState::ofs) <<message<<std::endl;
 }
 
 void CubismState::init(ID3D11Device * device) {
+    ofs = new std::ofstream("this.log");
     option.LogFunction = printLog;
-    option.LoggingLevel = Csm::CubismFramework::Option::LogLevel_Info;
+    option.LoggingLevel = Csm::CubismFramework::Option::LogLevel_Verbose;
     allocator = new LAppAllocator();
     Csm::CubismFramework::StartUp(allocator, &option);
     //Initialize cubism
@@ -258,7 +261,9 @@ void LAppModel::Update(float delta)
     _model->LoadParameters(); // 前回セーブされた状態をロード
     if (_motionManager->IsFinished()) {
         // モーションの再生がない場合、待機モーションの中からランダムで再生する
-        StartRandomMotion(/*MotionGroupIdle*/"Idle", /*PriorityIdle*/1);
+        // StartRandomMotion(/*MotionGroupIdle*/"Idle", /*PriorityIdle*/1);
+        // StartRandomMotion(/*MotionGroupIdle*/"Idle", /*PriorityIdle*/1);
+        StartMotionByMotionName("Idle","idle",1);
     } else {
         motionUpdated = _motionManager->UpdateMotion(_model, deltaTimeSeconds); // モーションを更新
     }
@@ -321,6 +326,42 @@ void LAppModel::Update(float delta)
 
     _model->Update();
 
+}
+
+CubismMotionQueueEntryHandle LAppModel::StartMotionByMotionName(const csmChar* group, const char * motionName, csmInt32 priority, ACubismMotion::FinishedMotionCallback onFinishedMotionHandler) {
+
+    int count = _modelSetting->GetMotionCount(group);
+    if(count <= 0) {
+        return InvalidMotionQueueEntryHandleValue;
+    }
+    int resultIndex = -1;
+    for(int i = 0;i<count;i++) {
+        const csmString fileName = _modelSetting->GetMotionFileName(group, i);
+        int startPoint = 0;
+        for(int index = fileName.GetLength() - 1;index >= 0;index --) {
+            char c = fileName.GetRawString()[index];
+            if(c == '/' || c == '\\' || index == 0) {
+                startPoint = index;
+                break;
+            }
+        }
+        int index = 0;
+        while(motionName[index] != 0) {
+            if(motionName[index] != fileName.GetRawString()[startPoint + index]) {
+                break;
+            }
+            index++;
+        }
+        bool findName = motionName[index] == 0;
+        if(findName) {
+            resultIndex = i;
+            break;
+        }
+    }
+    if(resultIndex < 0) {
+        return InvalidMotionQueueEntryHandleValue;
+    }
+    return StartMotion(group,resultIndex,priority,onFinishedMotionHandler);
 }
 
 CubismMotionQueueEntryHandle LAppModel::StartMotion(const csmChar* group, csmInt32 no, csmInt32 priority, ACubismMotion::FinishedMotionCallback onFinishedMotionHandler)
@@ -503,4 +544,9 @@ bool LAppModel::isHit(float x,float y) {
         }
     }
     return false;
+}
+void LAppModel::getEyePos(float &x,float &y) {
+
+    x = _model->GetParameterValue(_idParamEyeBallX);
+    y = _model->GetParameterValue(_idParamAngleY);
 }

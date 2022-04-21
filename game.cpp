@@ -1,4 +1,4 @@
-#include "game.h"
+﻿#include "game.h"
 #include <iostream>
 #include <dcomp.h>
 #include <uuids.h>
@@ -29,9 +29,11 @@ bool Game::init() {
 
 	default_camera = Camera::defaultCamera();
 	createPerspectiveMatrix();
+	toast_manager = std::make_shared<ToastManager>();
+	text_renderer = std::make_shared<TextRenderer>();
+	text_renderer->init(cp_device.Get(),cp_device_context.Get(),L"resource/myfile.font");
 	sprite = std::make_shared<SimpleSprite>();
-	sprite->init(L"resource/img/background.jpg",Matrix::Identity);
-
+	sprite->init("resource/model/aidang_2/","aidang_2.model3.json",Matrix::Identity);
 	return true;
 }
 void FinishedMotion(Csm::ACubismMotion* self) {
@@ -67,8 +69,11 @@ static LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		instance->calcNDCCoord(x,y,nx,ny);
 		LAppModel * model = instance->getSprite()->getModel();
 		if(model->isHit(nx,ny)) {
-			model->StartRandomMotion("TapBody",2,FinishedMotion);
+			model->StartRandomMotion("Idle",2,FinishedMotion);
+		}else {
+			model->StartRandomMotion("Idle",2,FinishedMotion);
 		}
+		instance->getToastManager().toast(L"你干嘛啊!",XMFLOAT2(0.f,0.f),3000);
 		break;
 	}
 	case WM_MOUSEWHEEL:{
@@ -236,6 +241,7 @@ void Game::resize(UINT width,UINT heigth) {
 }
 void Game::loop() {
 	bool done = false;
+	timer.start();
 	while(!done) {
 		MSG msg;
 		while(PeekMessage(&msg,NULL,0U,0U,PM_REMOVE)) {
@@ -248,6 +254,7 @@ void Game::loop() {
 		if(done) {
 			break;
 		}
+		update(timer.delta());
 		render();
 		cp_swap_chain->Present(0,0);
 		cp_dcv->SetContent(cp_swap_chain.Get());
@@ -256,8 +263,19 @@ void Game::loop() {
 	}
 }
 
+void Game::update(int delta) {
+	toast_manager->update(delta);
+	sprite->update(delta);
+}
+
 void Game::render(){
 	setViewPort();
+	float bc[] = {0.f,0.0f,0.f,0.f};
+	cp_device_context->ClearRenderTargetView(cp_rtv.Get(),bc);
+	cp_device_context->ClearDepthStencilView(cp_dsv.Get(),D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,1.f,0);
+	cp_device_context->OMSetRenderTargets(1,cp_rtv.GetAddressOf(),cp_dsv.Get());
+	cp_device_context->OMSetDepthStencilState(cp_dss.Get(),0);
+	toast_manager->render(text_renderer.get());
 	sprite->render();
 }
 
