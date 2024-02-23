@@ -1,3 +1,4 @@
 build
 .vscode
 resource/model
+.cache/

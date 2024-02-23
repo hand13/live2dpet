@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <DirectXTK/SpriteFont.h>
+#include <string>
 using DirectX::SpriteBatch;
 using DirectX::SpriteFont;
 using DirectX::XMFLOAT2;
